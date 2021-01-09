@@ -1,0 +1,20 @@
+{
+  "id": "8aace3ba763e2fd50176e18100e66856",
+  "name": "test80.xyz.",
+  "description": "ddns服务器，搭建完成",
+  "type": "A",
+  "ttl": 300,
+  "records": [
+    "113.110.226.39"
+  ],
+  "status": "ACTIVE",
+  "zone_id": "8aace3ba763e2fd50176e17d720b6686",
+  "zone_name": "test80.xyz.",
+  "create_at": "2021-01-08T10:18:16.640",
+  "update_at": "2021-01-09T09:32:55.011",
+  "default": false,
+  "project_id": "095480fcc100267c2fedc017a5e09d13",
+  "links": {
+    "self": "https://dns.myhuaweicloud.com/v2/zones/8aace3ba763e2fd50176e17d720b6686/recordsets/8aace3ba763e2fd50176e18100e66856"
+  }
+}

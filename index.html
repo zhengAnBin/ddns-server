@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <script>
+        const user = {
+            auth: {
+                identity: {
+                    methods: ["password"],
+                    password: {
+                        user: {
+                            name: "hw20994458",
+                            password: "32sznr518000",
+                            domain: {
+                                id: "09520183a380f3051fb3c0172d291f73",
+                                // name: "hw20994458"
+                            }
+                        }
+                    }
+                },
+                scope: {
+                    project: {
+                        name: "cn-south-1"
+                    }
+                }
+            }
+        }
+
+    // 获取token接口 地区: 华南/广州
+    // https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens
+    fetch("https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens", {
+        method: "POST",
+        body: JSON.stringify(user),
+        headers: {
+            "Content-Type": "application/json"
+        }
+    }).then(res => res.josn())
+    .then(data => console.log(data))
+    </script>
+</body>
+</html>

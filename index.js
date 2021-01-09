@@ -12,7 +12,7 @@ const user = {
             password: {
                 user: {
                     name: "hw20994458",
-                    password: "32sznr518000",
+                    
                     domain: {
                         name: "hw20994458"
                     }

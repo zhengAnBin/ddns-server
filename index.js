@@ -1,179 +1,83 @@
 const fs = require('fs')
-const request = require('request')
 const cheerio = require('cheerio')
-// 保存华为云返回的 token
-let token = fs.readFileSync("./token.txt").toString()
+const { userBody, Endpoint, domainName, recordValueType } = require('./config')
+const axios = require('axios')
 
-// 获取token的请求体
-const user = {
-    auth: {
-        identity: {
-            methods: ["password"],
-            password: {
-                user: {
-                    name: "hw20994458",
-                    
-                    domain: {
-                        name: "hw20994458"
-                    }
-                }
-            }
-        },
-        scope: {
-            project: {
-                name: "cn-south-1"
-            }
-        }
-    }
-}
-
+console.time('start')
 
 // 获取token接口 地区: 华南/广州
 // https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens
 
-// const getToken = async () => {
-//     try {
-//         const result = await request({
-//             url: "https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens?nocatalog=true",
-//             method: "POST",
-//             headers: {
-//                 "Content-Type": "application/json;charset=utf8"
-//             },
-//             body: JSON.stringify(user)
-//         })
-        
-//         const token = result['x-subject-token']
-//         console.log(token)
-//         console.log(result)
-//         fs.writeFileSync('./token.txt', token + '')
-//     } catch(err) {
-//         console.log(err)
-//     }
-// }
-// getToken()
+let token, ip, zone_id, record_id
+
 const getToken = () => {
-    request({
+    return axios({
         url: "https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens?nocatalog=true",
         method: "POST",
         headers: {
-            "Content-Type": "application/json;charset=utf8"
+            "Content-Type": "application/json"
         },
-        body: JSON.stringify(user)
-    }, function(error, response, body) {
-        if(error) {
-            console.log(error)
-        } else {
-            token = response.headers['x-subject-token']
-            try{
-                fs.writeFileSync('./token.txt', token)
-            } catch(err) {
+        data: JSON.stringify(userBody)
+    }).then(result => result.headers['x-subject-token'])
+}
 
-            }
+const analysisNoneId = (data, domainName) => {
+    return data.zones.filter(item => {
+        if(item.name === domainName) {
+            return item
         }
-    })
+    })[0].id
 }
-
-if(!token) {
-    getToken()
-}
-
-const output = (e) => {
-    fs.writeFileSync(`${new Date().getTime()}.json`, JSON.stringify(e, null, 2))
-}
-
-const dns = {
-    name: "test80.xyz",  //域名（必选String）
-    description: "测试环境的域名",  //域名的描述信息（可选String）
-    zone_type: "public",  //域名类型（可选String）
-    email: "2205623938@qq.com",  //管理该域名的管理员邮箱（可选String）
-    ttl: 300,   //默认生成的SOA记录中有效缓存时间（可选String）
-}
-
-let zone_id = "8aace3ba763e2fd50176e17d720b6686"
 
 const getZoneId = () => {
-    const target = 'test80.xyz.'
     const dnsUrl = 'https://dns.cn-south-1.myhuaweicloud.com/v2/zones'
-    request({
+    return axios({
         url: dnsUrl,
         headers: {
             "Content-Type": "application/json;charset=utf8",
             "X-Auth-Token": token
-        },
-    }, function(err, response, body) {
-        if(err) {
-            console.log(err)
-        } else {
-            body = JSON.parse(body)            
-            const targetid = body.zones.filter(item => {
-                if(item.name === target) {
-                    return item
-                }
-            })[0].id
+        }
+    }).then(result => analysisNoneId(result.data, domainName))
+}
 
-            return targetid
+const analysisRecordValue = (data, recordValueType) => {
+    return data.recordsets.filter(item => {
+        if(item.type === recordValueType && item.id) {
+            return item
         }
     })
 }
-// getZoneId()
 
-const getRecordSet = (zone_id) => {
-    request({
+const getRecordValue = (zone_id) => {
+    return axios({
+        method: "GET",
         url: `https://dns.cn-south-1.myhuaweicloud.com/v2/zones/${zone_id}/recordsets`,
         headers: {
             "Content-Type": "application/json;charset=utf8",
             "X-Auth-Token": token
         },
-    }, (err, response, body) => {
-        if(err) {
-            console.log(err)
-        } else {
-            body = JSON.parse(body)
-            let recordsetList = body.recordsets.filter(item => {
-                if(item.type === 'A' && item.id) {
-                    return item
-                }
-            });
-            return recordsetList[0].id
-        }
-    })
+    }).then(result => analysisRecordValue(result.data, recordValueType))
 }
-// getRecordSet(zone_id)
 
-const RecordSet_id = '8aace3ba763e2fd50176e18100e66856'
-
-const setRecordVal = (zone_id, RecordSet_id) => {
-    request({
+const setRecordVal = (zone_id, record_id, target_ip) => {
+    axios({
         method: "PUT",
-        url: `https://dns.cn-south-1.myhuaweicloud.com/v2/zones/${zone_id}/recordsets/${RecordSet_id}`,
+        url: `https://dns.cn-south-1.myhuaweicloud.com/v2/zones/${zone_id}/recordsets/${record_id}`,
         headers: {
             "Content-Type": "application/json;charset=utf8",
             "X-Auth-Token": token
         },
         body: JSON.stringify({
-            description: "ddns服务器，搭建完成",
-            records: [
-                "113.110.226.39"
-            ]
+            description: `ddns server, updateTime: ${new Date() + ''}`,
+            records: [ target_ip ]
         })
-    }, (err, response, body) => {
-        if(err) {
-            console.log(err)
-        } else {
-            body = JSON.parse(body)
-            output(body)
-            // let recordsetList = body.recordsets.filter(item => {
-            //     if(item.type === 'A' && item.id) {
-            //         return item
-            //     }
-            // });
-            // return recordsetList[0].id
-        }
+    }).then(result => {
+        console.log(result)
+        // TODO: 完成时的提醒
     })
 }
 
-// setRecordVal(zone_id, RecordSet_id)
-function verifyIP(ip) {
+const verifyIP = (ip) => {
     if(typeof ip !== 'string') { return false }
     const v1 = ip.split('.')
     if(v1.length === 4 && ip.length >= 8 && ip.length <= 16) {
@@ -182,24 +86,47 @@ function verifyIP(ip) {
         return false
     }
 }
-const getIP = () => {
-    return request({
-        url: "https://2021.ip138.com/"
-    }, function (err,rep, html) {
-        var $ = cheerio.load(html)
-        let ip
-        $('a').each((i, ele) => {
-            let is = $(ele).text()
-            if(verifyIP(is)) {
-                ip = is
-            }
-        })
-        return ip
-    })
+
+const ddnsProcess = async (new_ip, isGetToken) => {
+    if(isGetToken) {
+        token = await getToken()
+    }
+    zone_id = await getZoneId()
+    record_id = await getRecordValue(zone_id)
+    record_id.forEach((record) => setRecordVal(zone_id, record.id, new_ip));
 }
 
-const a = async () => {
-    const e = await getIP()
-    console.log(e)
+const getIP = async () => {
+    const result = await axios.get('https://2021.ip138.com/')
+    
+    const $ = cheerio.load(result.data)
+    let new_ip
+
+    $('a').each((i, ele) => {
+        let value = $(ele).text()
+        if(verifyIP(value)) {
+            new_ip = value
+        }
+    })
+
+    if(new_ip && new_ip !== ip) {
+        let isGetToken
+        if(token) {
+            isGetToken = false
+        } else {
+            isGetToken = true
+        }
+
+        ddnsProcess(new_ip, isGetToken)
+        console.timeEnd('start')
+    }
 }
-a()
+
+const _init = (isTest) => {
+    if(isTest) {
+        getIP()
+    } else {
+        setInterval(getIP, 1000)
+    }
+}
+_init(true)

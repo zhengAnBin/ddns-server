@@ -6,7 +6,7 @@ const schedule = require('node-schedule');
 // 获取token接口 地区: 华南/广州
 // https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens
 
-let token, ip = '113.110.224.96', zone_id, record_id
+let token, ip = '119.139.199.45', zone_id, record_id
 
 const getToken = () => {
     return axios({
@@ -102,7 +102,8 @@ const ddnsProcess = async (new_ip, isGetToken) => {
 const getIP = async () => {
     
     const result = await axios.get('https://2021.ip138.com/')
-    
+    fs.writeFileSync('./html.txt', `${result.data}`)
+
     const $ = cheerio.load(result.data)
     let new_ip
 
@@ -114,7 +115,7 @@ const getIP = async () => {
     })
 
     if(new_ip && new_ip !== ip) {
-
+        ip = new_ip
         let isGetToken
         if(token) {
             isGetToken = false
@@ -128,8 +129,7 @@ const getIP = async () => {
 
 const  scheduleCronstyle = ()=>{
     // 每天的凌晨1点1分30秒触发
-    schedule.scheduleJob('30 31 10 * * *', getIP);
-    
+    schedule.scheduleJob('30 * * * * *', getIP);
 }
 
 scheduleCronstyle()

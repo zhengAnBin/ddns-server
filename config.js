@@ -12,7 +12,7 @@ const userBody = {
           password: {
               user: {
                   name: "hw20994458",
-                  // TODO: password: ".....",
+                  password: "32sznr518000",
                   domain: {
                     name: "hw20994458"
                   }

@@ -2,13 +2,11 @@ const fs = require('fs')
 const cheerio = require('cheerio')
 const { userBody, Endpoint, domainName, recordValueType } = require('./config')
 const axios = require('axios')
-
-console.time('start')
-
+const schedule = require('node-schedule');
 // 获取token接口 地区: 华南/广州
 // https://iam.cn-south-1.myhuaweicloud.com/v3/auth/tokens
 
-let token, ip, zone_id, record_id
+let token, ip = '113.110.224.96', zone_id, record_id
 
 const getToken = () => {
     return axios({
@@ -67,13 +65,18 @@ const setRecordVal = (zone_id, record_id, target_ip) => {
             "Content-Type": "application/json;charset=utf8",
             "X-Auth-Token": token
         },
-        body: JSON.stringify({
+        data: JSON.stringify({
             description: `ddns server, updateTime: ${new Date() + ''}`,
             records: [ target_ip ]
         })
     }).then(result => {
-        console.log(result)
-        // TODO: 完成时的提醒
+        if(String(result.status).startWith('2')) {
+            const content = `
+                ${new Date()}
+                ${result.data}
+            `
+            fs.writeFileSync('./success.txt', content)
+        }
     })
 }
 
@@ -97,6 +100,7 @@ const ddnsProcess = async (new_ip, isGetToken) => {
 }
 
 const getIP = async () => {
+    
     const result = await axios.get('https://2021.ip138.com/')
     
     const $ = cheerio.load(result.data)
@@ -110,23 +114,22 @@ const getIP = async () => {
     })
 
     if(new_ip && new_ip !== ip) {
+
         let isGetToken
         if(token) {
             isGetToken = false
         } else {
             isGetToken = true
         }
-
         ddnsProcess(new_ip, isGetToken)
-        console.timeEnd('start')
+        fs.writeFileSync('./record.txt', `稳定执行! 时间:${new Date() + ''}, 最新ip为: ${new_ip}`)
     }
 }
 
-const _init = (isTest) => {
-    if(isTest) {
-        getIP()
-    } else {
-        setInterval(getIP, 1000)
-    }
+const  scheduleCronstyle = ()=>{
+    // 每天的凌晨1点1分30秒触发
+    schedule.scheduleJob('30 31 10 * * *', getIP);
+    
 }
-_init(true)
+
+scheduleCronstyle()
